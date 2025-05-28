@@ -54,10 +54,17 @@ client.on('messageReactionAdd', async (reaction, user) => {
         .setTimestamp(message.createdAt)
         .setFooter({ text: `${emoji} ${reaction.count} | #${message.channel.name}` });
 
+      
       if (message.attachments.size > 0) {
-        const image = message.attachments.first().url;
-        embed.setImage(image);
-      }
+  const imageAttachment = message.attachments.find(att =>
+    att.url.match(/\.(png|jpe?g|gif|webp)$/i)
+  );
+
+  if (imageAttachment) {
+    embed.setImage(imageAttachment.url);
+  }
+}
+
 
       await starboardChannel.send({ embeds: [embed] });
       postedMessages.add(message.id);
