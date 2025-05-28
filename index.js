@@ -50,7 +50,14 @@ client.on('messageReactionAdd', async (reaction, user) => {
           name: message.author.tag,
           iconURL: message.author.displayAvatarURL()
         })
-        .setDescription(message.content || '*No text content*')
+        .setDescription(
+  message.content && message.content.trim().length > 0
+    ? message.content
+    : message.attachments.size > 0
+      ? '[Image]'
+      : '*No text content*'
+)
+
         .setTimestamp(message.createdAt)
         .setFooter({ text: `${emoji} ${reaction.count} | #${message.channel.name}` });
 
