@@ -69,7 +69,7 @@ if (message.attachments.size > 0) {
   }
 }
 
-}
+
 
 
       await starboardChannel.send({ embeds: [embed] });
