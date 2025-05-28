@@ -1,6 +1,6 @@
 
 const fs = require('fs');
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
 const OWNER_ID = '1168495754894131251';
@@ -15,6 +15,21 @@ function saveTours(filename, tours) {
     fs.writeFileSync(filename, JSON.stringify(tours, null, 2));
 }
 
+function createEmbed(title, tours) {
+    const embed = new EmbedBuilder()
+        .setTitle(title)
+        .setColor(0x00AE86);
+
+    if (tours.length === 0) {
+        embed.setDescription("No upcoming shows.");
+    } else {
+        const desc = tours.map(t => `📅 **${t.date}** — ${t.venue}, ${t.city}, ${t.country}`).join('\n');
+        embed.setDescription(desc);
+    }
+
+    return embed;
+}
+
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
@@ -23,16 +38,14 @@ client.on('messageCreate', async message => {
 
     if (cmd.startsWith('!geese tour')) {
         const tours = loadTours('./geese_tours.json');
-        if (tours.length === 0) return message.channel.send('No upcoming Geese shows.');
-        const msg = tours.map(t => `📅 ${t.date} — ${t.venue}, ${t.city}, ${t.country}`).join('\n');
-        return message.channel.send(msg);
+        const embed = createEmbed('🎸 Geese — Upcoming Tour Dates', tours);
+        return message.channel.send({ embeds: [embed] });
     }
 
     if (cmd.startsWith('!cameron tour')) {
         const tours = loadTours('./cameron_tours.json');
-        if (tours.length === 0) return message.channel.send('No upcoming Cameron Winter shows.');
-        const msg = tours.map(t => `📅 ${t.date} — ${t.venue}, ${t.city}, ${t.country}`).join('\n');
-        return message.channel.send(msg);
+        const embed = createEmbed('🎤 Cameron Winter — Upcoming Solo Dates', tours);
+        return message.channel.send({ embeds: [embed] });
     }
 
     if (cmd.startsWith('!addgeesetour') || cmd.startsWith('!addcamerontour')) {

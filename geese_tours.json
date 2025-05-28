@@ -52,6 +52,17 @@
     "venue": "FloydFest",
     "city": "Check, VA",
     "country": "USA"
+  },
+  {
+    "date": "2025-12-11",
+    "venue": "Carnegie Hall",
+    "city": "New York, NY",
+    "country": "USA"
+  },
+  {
+    "date": "2025-12-16",
+    "venue": "Rockefeller Chapel",
+    "city": "Chicago, IL",
+    "country": "USA"
   }
- 
 ]
