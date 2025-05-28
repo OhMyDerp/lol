@@ -1,0 +1,26 @@
+[
+  {
+    "date": "2025-12-01",
+    "venue": "Roundhouse",
+    "city": "London",
+    "country": "UK"
+  },
+  {
+    "date": "2025-12-11",
+    "venue": "Carnegie Hall (Stern Auditorium)",
+    "city": "New York, NY",
+    "country": "USA"
+  },
+  {
+    "date": "2025-12-13",
+    "venue": "Palace Theatre",
+    "city": "Los Angeles, CA",
+    "country": "USA"
+  },
+  {
+    "date": "2025-12-16",
+    "venue": "Rockefeller Memorial Chapel",
+    "city": "Chicago, IL",
+    "country": "USA"
+  }
+]
