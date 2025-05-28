@@ -41,4 +41,49 @@ client.on('messageReactionAdd', async (reaction, user) => {
     );
 
     if (!starboardChannel) {
-      console
+      console.warn(`⚠️ Starboard channel "${STARBOARD_CHANNEL_NAME}" not found.`);
+      return;
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor(0xffac33)
+      .setAuthor({
+        name: message.author.tag,
+        iconURL: message.author.displayAvatarURL()
+      })
+      .setTimestamp(message.createdAt)
+      .setFooter({ text: `${emoji} ${reaction.count} | #${message.channel.name}` });
+
+    // Add description if text is present
+    if (message.content && message.content.trim().length > 0) {
+      embed.setDescription(message.content);
+    }
+
+    // Handle image attachments
+    const imageAttachment = message.attachments.find(att =>
+      (att.contentType && att.contentType.startsWith('image/')) ||
+      att.url.match(/\.(png|jpe?g|gif|webp)$/i)
+    );
+
+    if (imageAttachment) {
+      console.log("✅ Attaching image:", imageAttachment.url);
+      embed.setImage(imageAttachment.url);
+    } else {
+      console.log("ℹ️ No valid image found in attachments.");
+    }
+
+    // Only send if there's at least text or an image
+    if (embed.data.description || embed.data.image) {
+      await starboardChannel.send({ embeds: [embed] });
+      postedMessages.add(message.id);
+      console.log("🌟 Starred message sent to starboard.");
+    } else {
+      console.log("⚠️ Skipped posting empty embed.");
+    }
+
+  } catch (err) {
+    console.error('❌ Error handling reaction:', err);
+  }
+});
+
+client.login(process.env.DISCORD_TOKEN);
