@@ -1,125 +1,66 @@
+
 const fs = require('fs');
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions
-  ]
-});
+const { Client, GatewayIntentBits } = require('discord.js');
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
 const OWNER_ID = '1168495754894131251';
-const tourFile = './tours.json';
 
-client.on('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
-});
+function loadTours(filename) {
+    if (!fs.existsSync(filename)) return [];
+    const raw = fs.readFileSync(filename);
+    return JSON.parse(raw).filter(t => new Date(t.date) >= new Date());
+}
+
+function saveTours(filename, tours) {
+    fs.writeFileSync(filename, JSON.stringify(tours, null, 2));
+}
 
 client.on('messageCreate', async message => {
-  if (message.author.bot) return;
+    if (message.author.bot) return;
 
-  // Display upcoming tours
-  if (message.content.toLowerCase() === '!geese tour') {
-    try {
-      const data = fs.readFileSync(tourFile);
-      const tours = JSON.parse(data);
-
-      const today = new Date().toISOString().split('T')[0];
-      const upcomingTours = tours.filter(t => t.date >= today);
-
-      // Update file to clean out old dates
-      fs.writeFileSync(tourFile, JSON.stringify(upcomingTours, null, 2));
-
-      if (!upcomingTours.length) {
-        return message.channel.send('📭 No upcoming Geese shows.');
-      }
-
-      const tourList = upcomingTours.map((event, i) =>
-        `**#${i+1} – ${event.date}** – ${event.city}, ${event.country} – ${event.venue}`
-      ).join('\n');
-
-      const embed = new EmbedBuilder()
-        .setTitle('🎸 Geese Tour Dates')
-        .setColor(0x1db954)
-        .setDescription(tourList);
-
-      await message.channel.send({ embeds: [embed] });
-    } catch (err) {
-      console.error('Error loading tour data:', err);
-      message.channel.send('⚠️ Could not load tour info.');
-    }
-  }
-
-  // Add tour (requires owner approval)
-  if (message.content.startsWith('!addtour')) {
     const args = message.content.split('|').map(arg => arg.trim());
-    if (args.length !== 4) {
-      return message.channel.send(
-        '❗ Format: `!addtour YYYY-MM-DD | Venue Name | City | Country`'
-      );
+    const [cmd, ...rest] = args;
+
+    if (cmd.startsWith('!geese tour')) {
+        const tours = loadTours('./geese_tours.json');
+        if (tours.length === 0) return message.channel.send('No upcoming Geese shows.');
+        const msg = tours.map(t => `📅 ${t.date} — ${t.venue}, ${t.city}, ${t.country}`).join('\n');
+        return message.channel.send(msg);
     }
 
-    const [date, venue, city, country] = args;
-    console.log('Parsed date:', date);
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return message.reply('❌ Date must be in `YYYY-MM-DD` format.');
+    if (cmd.startsWith('!cameron tour')) {
+        const tours = loadTours('./cameron_tours.json');
+        if (tours.length === 0) return message.channel.send('No upcoming Cameron Winter shows.');
+        const msg = tours.map(t => `📅 ${t.date} — ${t.venue}, ${t.city}, ${t.country}`).join('\n');
+        return message.channel.send(msg);
     }
 
-    const preview = `📅 **${date}** – ${city}, ${country} – ${venue}`;
-    const confirmMsg = await message.channel.send(
-      `Add this tour date?\n${preview}\n\nOnly <@${OWNER_ID}> can approve this.`
-    );
-    await confirmMsg.react('✅');
-    await confirmMsg.react('❌');
+    if (cmd.startsWith('!addgeesetour') || cmd.startsWith('!addcamerontour')) {
+        if (message.author.id !== OWNER_ID) return message.channel.send('❌ You are not authorized to add tour dates.');
+        if (args.length < 4) return message.channel.send('❌ Format: !addgeesetour YYYY-MM-DD | Venue | City | Country');
 
-    const filter = (reaction, user) =>
-      ['✅', '❌'].includes(reaction.emoji.name) && user.id === OWNER_ID;
+        const date = args[0].split(' ')[1];
+        const venue = args[1], city = args[2], country = args[3];
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return message.channel.send('❌ Date must be in `YYYY-MM-DD` format.');
 
-    const collector = confirmMsg.createReactionCollector({ filter, max: 1, time: 15000 });
-
-    collector.on('collect', reaction => {
-      if (reaction.emoji.name === '✅') {
-        const tours = fs.existsSync(tourFile) ? JSON.parse(fs.readFileSync(tourFile)) : [];
+        const filename = cmd.includes('cameron') ? './cameron_tours.json' : './geese_tours.json';
+        const tours = loadTours(filename);
         tours.push({ date, venue, city, country });
-        fs.writeFileSync(tourFile, JSON.stringify(tours, null, 2));
-        message.channel.send('✅ Tour date added successfully!');
-      } else {
-        message.channel.send('❌ Tour date addition cancelled.');
-      }
-    });
-
-    collector.on('end', collected => {
-      if (collected.size === 0) {
-        message.channel.send('⏱ Timed out. No action taken.');
-      }
-    });
-  }
-
-  // Remove tour (owner only)
-  if (message.content.startsWith('!removetour')) {
-    if (message.author.id !== OWNER_ID) {
-      return message.reply("❌ Only the owner can remove tour dates.");
+        saveTours(filename, tours);
+        return message.channel.send(`✅ Tour added: ${venue}, ${city}, ${country} on ${date}`);
     }
 
-    const args = message.content.split(' ');
-    const index = parseInt(args[1], 10) - 1;
+    if (cmd.startsWith('!removegeesetour') || cmd.startsWith('!removecamerontour')) {
+        if (message.author.id !== OWNER_ID) return message.channel.send('❌ You are not authorized to remove tour dates.');
+        const date = cmd.split(' ')[1];
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return message.channel.send('❌ Format: !removegeesetour YYYY-MM-DD');
 
-    if (isNaN(index)) {
-      return message.reply('⚠️ Please provide a valid tour index to remove. (e.g. `!removetour 2`)');
+        const filename = cmd.includes('cameron') ? './cameron_tours.json' : './geese_tours.json';
+        let tours = loadTours(filename);
+        const newTours = tours.filter(t => t.date !== date);
+        saveTours(filename, newTours);
+        return message.channel.send(`✅ Removed tour on ${date}`);
     }
-
-    const tours = fs.existsSync(tourFile) ? JSON.parse(fs.readFileSync(tourFile)) : [];
-
-    if (index < 0 || index >= tours.length) {
-      return message.reply('⚠️ That index is out of range.');
-    }
-
-    const removed = tours.splice(index, 1);
-    fs.writeFileSync(tourFile, JSON.stringify(tours, null, 2));
-    return message.channel.send(`🗑 Removed tour date: **${removed[0].date}** – ${removed[0].venue}`);
-  }
 });
 
-client.login(process.env.BOT_TOKEN);
+client.login(process.env.TOKEN);
