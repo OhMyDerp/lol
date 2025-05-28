@@ -44,25 +44,22 @@ client.on('messageReactionAdd', async (reaction, user) => {
         return;
       }
 
-      const embed = new EmbedBuilder()
-        .setColor(0xffac33)
-        .setAuthor({
-          name: message.author.tag,
-          iconURL: message.author.displayAvatarURL()
-        })
-        .setDescription(
-  message.content && message.content.trim().length > 0
-    ? message.content
-    : message.attachments.size > 0
-      ? '[Image]'
-      : '*No text content*'
-)
+    const embed = new EmbedBuilder()
+  .setColor(0xffac33)
+  .setAuthor({
+    name: message.author.tag,
+    iconURL: message.author.displayAvatarURL()
+  })
+  .setTimestamp(message.createdAt)
+  .setFooter({ text: `${emoji} ${reaction.count} | #${message.channel.name}` });
 
-        .setTimestamp(message.createdAt)
-        .setFooter({ text: `${emoji} ${reaction.count} | #${message.channel.name}` });
+// Add description if there's text
+if (message.content && message.content.trim().length > 0) {
+  embed.setDescription(message.content);
+}
 
-      
-      if (message.attachments.size > 0) {
+// Attach image if it's a supported type
+if (message.attachments.size > 0) {
   const imageAttachment = message.attachments.find(att =>
     att.url.match(/\.(png|jpe?g|gif|webp)$/i)
   );
@@ -70,6 +67,8 @@ client.on('messageReactionAdd', async (reaction, user) => {
   if (imageAttachment) {
     embed.setImage(imageAttachment.url);
   }
+}
+
 }
 
 
