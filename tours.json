@@ -1,1 +1,80 @@
-[]
+[
+  {
+    "date": "2025-05-29",
+    "venue": "Thompson's Point",
+    "city": "Portland, ME",
+    "country": "USA"
+  },
+  {
+    "date": "2025-05-30",
+    "venue": "The Met",
+    "city": "Philadelphia, PA",
+    "country": "USA"
+  },
+  {
+    "date": "2025-05-31",
+    "venue": "The Met",
+    "city": "Philadelphia, PA",
+    "country": "USA"
+  },
+  {
+    "date": "2025-06-02",
+    "venue": "KEMBA Live!",
+    "city": "Columbus, OH",
+    "country": "USA"
+  },
+  {
+    "date": "2025-06-03",
+    "venue": "Stage AE",
+    "city": "Pittsburgh, PA",
+    "country": "USA"
+  },
+  {
+    "date": "2025-06-04",
+    "venue": "Broadview Stage at SPAC",
+    "city": "Saratoga Springs, NY",
+    "country": "USA"
+  },
+  {
+    "date": "2025-06-06",
+    "venue": "Firefly Distillery",
+    "city": "North Charleston, SC",
+    "country": "USA"
+  },
+  {
+    "date": "2025-06-09",
+    "venue": "Asheville Yards",
+    "city": "Asheville, NC",
+    "country": "USA"
+  },
+  {
+    "date": "2025-07-23",
+    "venue": "FloydFest",
+    "city": "Check, VA",
+    "country": "USA"
+  },
+  {
+    "date": "2025-12-01",
+    "venue": "Roundhouse",
+    "city": "London",
+    "country": "UK"
+  },
+  {
+    "date": "2025-12-11",
+    "venue": "Carnegie Hall",
+    "city": "New York, NY",
+    "country": "USA"
+  },
+  {
+    "date": "2025-12-13",
+    "venue": "Palace Theatre",
+    "city": "Los Angeles, CA",
+    "country": "USA"
+  },
+  {
+    "date": "2025-12-16",
+    "venue": "Rockefeller Chapel",
+    "city": "Chicago, IL",
+    "country": "USA"
+  }
+]

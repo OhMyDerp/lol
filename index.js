@@ -61,6 +61,7 @@ client.on('messageCreate', async message => {
     }
 
     const [date, venue, city, country] = args;
+    console.log('Parsed date:', date);
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return message.reply('❌ Date must be in `YYYY-MM-DD` format.');
