@@ -11,12 +11,14 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
-const STAR_EMOJI = '⭐';
 const STAR_THRESHOLD = 3;
 const STARBOARD_CHANNEL_NAME = 'starboard';
-
-// Track which messages have been posted
 const postedMessages = new Set();
+
+// NUH UH emojis
+const excludedEmojis = new Set([
+  '👎', '💩', '❌', '😡', '🚫', '😠', '🤮', '🖕'
+]);
 
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
@@ -24,15 +26,14 @@ client.once('ready', () => {
 
 client.on('messageReactionAdd', async (reaction, user) => {
   try {
-    // Ignore partials
     if (reaction.partial) await reaction.fetch();
     if (reaction.message.partial) await reaction.message.fetch();
 
-    if (reaction.emoji.name !== STAR_EMOJI) return;
-
     const message = reaction.message;
+    const emoji = reaction.emoji.toString();
 
-    // Only post if threshold met and not already posted
+    if (excludedEmojis.has(emoji)) return;
+
     if (reaction.count >= STAR_THRESHOLD && !postedMessages.has(message.id)) {
       const starboardChannel = message.guild.channels.cache.find(
         channel => channel.name === STARBOARD_CHANNEL_NAME && channel.isTextBased()
@@ -51,7 +52,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
         })
         .setDescription(message.content || '*No text content*')
         .setTimestamp(message.createdAt)
-        .setFooter({ text: `⭐ ${reaction.count} | #${message.channel.name}` });
+        .setFooter({ text: `${emoji} ${reaction.count} | #${message.channel.name}` });
 
       if (message.attachments.size > 0) {
         const image = message.attachments.first().url;
