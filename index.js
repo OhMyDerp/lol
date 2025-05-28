@@ -1,110 +1,124 @@
-const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
-const axios = require('axios');
-require('dotenv').config();
-
+const fs = require('fs');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.MessageContent
-  ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction]
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions
+  ]
 });
 
-const STAR_THRESHOLD = 3;
-const STARBOARD_CHANNEL_NAME = 'starboard';
-const postedMessages = new Set();
-const excludedEmojis = new Set(['👎', '💩', '❌', '😡', '🚫', '😠', '🤮', '🖕']);
+const OWNER_ID = '1168495754894131251';
+const tourFile = './tours.json';
 
-client.once('ready', () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
+client.on('ready', () => {
+  console.log(`Logged in as ${client.user.tag}`);
 });
 
-// ⭐ STARBOARD FUNCTIONALITY
-client.on('messageReactionAdd', async (reaction, user) => {
-  try {
-    if (reaction.partial) await reaction.fetch();
-    if (reaction.message.partial) await reaction.message.fetch();
-
-    const message = reaction.message;
-    const emoji = reaction.emoji.toString();
-
-    if (excludedEmojis.has(emoji)) return;
-    if (reaction.count < STAR_THRESHOLD) return;
-    if (postedMessages.has(message.id)) return;
-
-    const starboardChannel = message.guild.channels.cache.find(
-      channel => channel.name === STARBOARD_CHANNEL_NAME && channel.isTextBased()
-    );
-
-    if (!starboardChannel) return;
-
-    const embed = new EmbedBuilder()
-      .setColor(0xffac33)
-      .setAuthor({
-        name: message.author.tag,
-        iconURL: message.author.displayAvatarURL()
-      })
-      .setTimestamp(message.createdAt)
-      .setFooter({ text: `${emoji} ${reaction.count} | #${message.channel.name}` });
-
-    if (message.content && message.content.trim().length > 0) {
-      embed.setDescription(message.content);
-    }
-
-    const imageAttachment = message.attachments.find(att =>
-      (att.contentType && att.contentType.startsWith('image/')) ||
-      att.url.match(/\.(png|jpe?g|gif|webp)$/i)
-    );
-
-    if (imageAttachment) {
-      embed.setImage(imageAttachment.url);
-    }
-
-    if (embed.data.description || embed.data.image) {
-      await starboardChannel.send({ embeds: [embed] });
-      postedMessages.add(message.id);
-    }
-  } catch (err) {
-    console.error('❌ Error handling reaction:', err);
-  }
-});
-
-// 🎸 GEESE TOUR COMMAND
 client.on('messageCreate', async message => {
+  if (message.author.bot) return;
+
+  // Display upcoming tours
   if (message.content.toLowerCase() === '!geese tour') {
-    const appId = 'geese-discord-bot';
-    const artistName = 'geese';
-
     try {
-      const response = await axios.get(
-        `https://rest.bandsintown.com/artists/${encodeURIComponent(artistName)}/events?app_id=${appId}`
-      );
-      const events = response.data;
+      const data = fs.readFileSync(tourFile);
+      const tours = JSON.parse(data);
 
-      if (!Array.isArray(events) || events.length === 0) {
-        return message.channel.send('📭 No upcoming Geese tour dates found.');
+      const today = new Date().toISOString().split('T')[0];
+      const upcomingTours = tours.filter(t => t.date >= today);
+
+      // Update file to clean out old dates
+      fs.writeFileSync(tourFile, JSON.stringify(upcomingTours, null, 2));
+
+      if (!upcomingTours.length) {
+        return message.channel.send('📭 No upcoming Geese shows.');
       }
 
-      const tourList = events.slice(0, 10).map(event => {
-        const date = new Date(event.datetime).toLocaleDateString();
-        const venue = event.venue;
-        return `**${date}** – ${venue.city}, ${venue.region || venue.country} – ${venue.name}`;
-      }).join('\n');
+      const tourList = upcomingTours.map((event, i) =>
+        `**#${i+1} – ${event.date}** – ${event.city}, ${event.country} – ${event.venue}`
+      ).join('\n');
 
-      const tourEmbed = new EmbedBuilder()
+      const embed = new EmbedBuilder()
         .setTitle('🎸 Geese Tour Dates')
         .setColor(0x1db954)
-        .setDescription(tourList)
-        .setFooter({ text: 'Data from Bandsintown' });
+        .setDescription(tourList);
 
-      await message.channel.send({ embeds: [tourEmbed] });
+      await message.channel.send({ embeds: [embed] });
     } catch (err) {
-      console.error('❌ Error fetching tour data:', err);
-      await message.channel.send('⚠️ Could not retrieve tour info at this time.');
+      console.error('Error loading tour data:', err);
+      message.channel.send('⚠️ Could not load tour info.');
     }
+  }
+
+  // Add tour (requires owner approval)
+  if (message.content.startsWith('!addtour')) {
+    const args = message.content.split('|').map(arg => arg.trim());
+    if (args.length !== 4) {
+      return message.channel.send(
+        '❗ Format: `!addtour YYYY-MM-DD | Venue Name | City | Country`'
+      );
+    }
+
+    const [date, venue, city, country] = args;
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return message.reply('❌ Date must be in `YYYY-MM-DD` format.');
+    }
+
+    const preview = `📅 **${date}** – ${city}, ${country} – ${venue}`;
+    const confirmMsg = await message.channel.send(
+      `Add this tour date?\n${preview}\n\nOnly <@${OWNER_ID}> can approve this.`
+    );
+    await confirmMsg.react('✅');
+    await confirmMsg.react('❌');
+
+    const filter = (reaction, user) =>
+      ['✅', '❌'].includes(reaction.emoji.name) && user.id === OWNER_ID;
+
+    const collector = confirmMsg.createReactionCollector({ filter, max: 1, time: 15000 });
+
+    collector.on('collect', reaction => {
+      if (reaction.emoji.name === '✅') {
+        const tours = fs.existsSync(tourFile) ? JSON.parse(fs.readFileSync(tourFile)) : [];
+        tours.push({ date, venue, city, country });
+        fs.writeFileSync(tourFile, JSON.stringify(tours, null, 2));
+        message.channel.send('✅ Tour date added successfully!');
+      } else {
+        message.channel.send('❌ Tour date addition cancelled.');
+      }
+    });
+
+    collector.on('end', collected => {
+      if (collected.size === 0) {
+        message.channel.send('⏱ Timed out. No action taken.');
+      }
+    });
+  }
+
+  // Remove tour (owner only)
+  if (message.content.startsWith('!removetour')) {
+    if (message.author.id !== OWNER_ID) {
+      return message.reply("❌ Only the owner can remove tour dates.");
+    }
+
+    const args = message.content.split(' ');
+    const index = parseInt(args[1], 10) - 1;
+
+    if (isNaN(index)) {
+      return message.reply('⚠️ Please provide a valid tour index to remove. (e.g. `!removetour 2`)');
+    }
+
+    const tours = fs.existsSync(tourFile) ? JSON.parse(fs.readFileSync(tourFile)) : [];
+
+    if (index < 0 || index >= tours.length) {
+      return message.reply('⚠️ That index is out of range.');
+    }
+
+    const removed = tours.splice(index, 1);
+    fs.writeFileSync(tourFile, JSON.stringify(tours, null, 2));
+    return message.channel.send(`🗑 Removed tour date: **${removed[0].date}** – ${removed[0].venue}`);
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.BOT_TOKEN);
